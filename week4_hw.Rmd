@@ -84,7 +84,7 @@ Our response variable ` dropped` is a categorical variable. We have tried the Lo
 
 ### Decision Tree
 
-Decision Tree algorithm performed very well and is easy to visualize and understand. It algorithm belongs to the family of supervised learning algorithms; it can be used for solving both regression and classification problems. The general motivation for using a decision tree is to predict the class or value of target variables by learning decision rules inferred from prior data (the training data). The decision tree algorithm tries to solve the problem by using a tree representation. Each internal node of the tree corresponds to an attribute and each leaf node corresponds to a class label. In R there are several packages available to run the decision tree algorithm. Here, we’ll use `rpart` package and also `caret` package to implement the decision tree with cross-validation.
+The Decision Tree algorithm performed very well and is easy to visualize and understand. It algorithm belongs to the family of supervised learning algorithms; it can be used for solving both regression and classification problems. The general motivation for using a decision tree is to predict the class or value of target variables by learning decision rules inferred from prior data (the training data). The decision tree algorithm tries to solve the problem by using a tree representation. Each internal node of the tree corresponds to an attribute and each leaf node corresponds to a class label. In R there are several packages available to run the decision tree algorithm. Here, we’ll use `rpart` package and also `caret` package to implement the decision tree with cross-validation.
 
 Next, we might need to prune the decision tree in an effort to reduce the size of the tree by removing sections of the tree that provide little predictive power. This will reduce complexity and over fitting of the final model leading to better interpretability for our school board and principle Vulcani. 
 
@@ -148,10 +148,9 @@ Decision trees are easy for people to understand, because the visualization is r
 - Random Forest with 96.95% accuracy  
 - KNN with 94.72% accuracy  
 
-The decision tree proved to be the second most accurate method tested.  It is far easier to comprehend than the most accurate method - the random forest - and is only slightly less accurate.  The decision tree was able to predict the output using only used two variables: GPA and grade. This shows us that student's performance at each stage in their high school career is a key factor in their decision to drop out. In the school's action items from this model, the primary focus would be to improve student's GPA performance. 
+The decision tree proved to be the second most accurate method tested.  It is far easier to comprehend than the most accurate method - the random forest - and is only slightly less accurate.  The decision tree was able to predict the output using only used two variables: GPA and grade. This shows us that students’ performance at each stage in their high school career is a key predictor in determining who might drop out. In the school's action items from this model, the primary focus would be to improve students’ GPA performance. 
 
-Even though the random forest had the highest accuracy, we will use the decision tree as our final model for better interpretability. In comparison to Hephaestats' final model with 8 key indicators, our final accuracy used less variables and was over 4 percentage points higher than their model. We were not given all of the variables that Hephaestats had at their disposal, so it is warranted that we developed a less complex model. The specific modeling efforts used by Hepaestats was not revealed in the case study. 
-
+Even though the random forest had the highest accuracy, we will use the decision tree as our final model for better interpretability.  In comparison to Hephaestats' final model with eight key indicators, our final accuracy used fewer variables and was over four percentage points higher than their model.  We were not given a list of the variables that Hephaestats used, and the specific modeling efforts used by Hepaestats were not revealed in the case study.  Following the principle of Occam’s razor, we chose to use a less complex model, especially since it yielded better results.
 
 
 
