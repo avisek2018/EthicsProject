@@ -21,8 +21,10 @@ In 2012, Minerva High School in Pittsburgh, Pennsylvania was struggling with its
 ## Data Import and Cleaning
 Upon import of the data, we converted all string columns into factors utilizing R's stringAsFactors argument in the read.csv function. We then removed the student ID field because it will not be used in this analysis. We converted all factors into numeric and converted the dropped field back into a factor for use as the response variable in our modeling efforts. 
 
-In an effort to normalize our data. we rescaled our resulting data using the following logic:  
-z = (x-min(x)) / (max(x) - min(x)) `
+In an effort to normalize our data. we rescaled our resulting data using the following logic:  <br> 
+
+` z = (x-min(x)) / (max(x) - min(x))`
+
 
 
 ```{r readData, message=FALSE, warning=FALSE, error=TRUE}
