@@ -1,0 +1,200 @@
+---
+title: "<center>Ethics|Final Project|Part I</center>"
+author: "<center>Aldo Adriazola, Avisek Choudhury, Kait Arnold </center>"
+date: "<center>East Section</center>"
+output:
+  pdf_document: 
+    toc: yes
+  html_document: 
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+In 2012, Minerva High School in Pittsburgh, Pennsylvania was struggling with its high drop out rates at 9% and low (on-time) graduation rates of 55%.  The school's principal and board will respond to the problem with a data-driven solution aimed at getting their students back on track and gaining insight into the why behind the high dropout rates. This solution will use machine learning to identify predictors of student disengagement as a proxy for potential drop out. Flagging at risk students will enable the teachers, counselors, administrators to respond accordingly with new interventions, meetings with school counselors and/or parents, new incentive structures, etc in the hopes of reversing the high dropout rates.
+
+
+## Data Import and Cleaning
+Upon import of the data, we converted all string columns into factors utilizing R's stringAsFactors argument in the read.csv function. We then removed the student ID field because it will not be used in this analysis. We converted all factors into numeric and converted the dropped field back into a factor for use as the response variable in our modeling efforts. 
+
+In an effort to normalize our data. we rescaled our resulting data using the following logic:  <br> 
+
+` z = (x-min(x)) / (max(x) - min(x))`
+
+
+
+```{r readData, message=FALSE, warning=FALSE, error=TRUE}
+#Load the libraries
+library(dplyr)
+library(readr)
+library(tidyverse)
+library(class)
+library(caret)
+library(rpart)
+library(partykit)
+library(randomForest)
+library(e1071)
+#Read the csv file
+case3data <- read.csv("case3data.csv",stringsAsFactors = TRUE)
+# remove studentID and move dropped to the first column
+case3data <- case3data %>%
+    select(-studentID) %>% select(dropped,everything())
+ 
+# convert all factors to numeric
+case3data <-case3data %>% mutate_if(is.factor,as.numeric)
+# convert dropped to a factor
+case3data$dropped <- as.factor(case3data$dropped)
+#Print the summary
+#case3data %>% summary
+```
+
+Below, we rescale the data using the normalization method described above and we create the training and testing data as 80/20.
+```{r dataCleansing, warning=FALSE, error=TRUE, message=FALSE}
+# First, rescale the data
+# create the rescaling function we have been using thus far
+rescale_x <- function(x){(x-min(x))/(max(x)-min(x))}
+# create a copy of the df
+rescaled_df <- case3data
+# apply the rescale function to all columns except dropped
+rescaled_df[2:14] <- sapply(rescaled_df[2:14],rescale_x)
+# confirm rescaling worked correctly
+# all rescaled vars should be within [0,1]
+summary(rescaled_df)
+# Now split the data
+# set the seed to Notre Dame's founding year
+set.seed(1842)
+# determine the number of rows in the dataframe
+n <- nrow(rescaled_df)
+# get a list of 20% of the rows in combined to use as indices
+test_idx <- sample.int(n, size = round(0.2 * n))
+## old ### set the the training data to be those rows not matching the index list
+## old ### training <- rescaled_df[-test_idx,]
+
+# using only 2012 for the training data and selecting only dropped, grade and gpa
+training <- rescaled_df %>% filter(year==0) %>% select(dropped, grade,gpa)
+## old ### set the the test data to be those rows matching the index list
+## old ### testing <- rescaled_df[test_idx,] 
+
+# using years except 2012 for the test data and selecting only dropped, grade and gpa
+testing <- rescaled_df %>% filter(year!=0) %>% select(dropped, grade,gpa)
+```
+
+
+## Model Building
+
+Our response variable ` dropped` is a categorical variable. We have tried the Logistic Regression, Decision Tree, Random Forest and K-Nearest Neighbor to build the model and predict the response variable. Although all the approach yielded excellent accuracy, we ended up choosing Decision Tree to build our final model.
+
+### Decision Tree
+
+The Decision Tree algorithm performed very well and is easy to visualize and understand. It algorithm belongs to the family of supervised learning algorithms; it can be used for solving both regression and classification problems. The general motivation for using a decision tree is to predict the class or value of target variables by learning decision rules inferred from prior data (the training data). The decision tree algorithm tries to solve the problem by using a tree representation. Each internal node of the tree corresponds to an attribute and each leaf node corresponds to a class label. In R there are several packages available to run the decision tree algorithm. Here, we’ll use `rpart` package and also `caret` package to implement the decision tree with cross-validation.
+
+Next, we might need to prune the decision tree in an effort to reduce the size of the tree by removing sections of the tree that provide little predictive power. This will reduce complexity and over fitting of the final model leading to better interpretability for our school board and principle Vulcani. 
+
+```{r descTree, warning=FALSE, error=TRUE, message=FALSE, echo=FALSE}
+# set the seed for consistent results
+set.seed(1842)
+# Define the formula
+form <- paste(names(testing[1]), 
+              paste(names(testing[-1]), 
+                    collapse='+'),sep = '~') %>% 
+  as.formula()
+# show the formula
+ form
+# Generate the Decision tree
+diag.tree <- rpart(form, data=training)
+# Print the Tree CP
+ printcp(diag.tree)
+# Plotting the Tree CP
+ plotcp(diag.tree)
+# Partykit plot of the Tree
+plot(as.party(diag.tree))
+```
+
+The tree looks simple and doesn't need pruning. Now let's use this Decision Tree to predict the response.
+
+
+```{r pruneTree, warning=FALSE, error=TRUE, message=FALSE}
+diag.new.tree <- prune(diag.tree, cp = 0.065)
+# Partykit plot of the Pruned Tree
+plot(as.party(diag.new.tree))
+```
+Unpruned tree
+```{r treePredict, warning=FALSE, error=TRUE, message=FALSE}
+# use the decision tree created above to predict values in the test data 
+# and then store the results
+testing$tree_predict <- predict(diag.tree, 
+                                newdata=testing, 
+                                type="class")
+# create the confusion matrix using the table function
+confusion_tree <- table(Predicted =testing$tree_predict,
+                        Actual=testing$dropped)
+# Print a legend
+cat("0 = Not Dropped Out, 1 = Dropped Out\n\n")
+# Print the confusion matrix
+confusion_tree
+# show the accuracy of the decision tree
+cat("Overall accuracy of prediction:\t", 
+    sum(diag(confusion_tree)/nrow(testing)) %>% 
+      round(4),"\n")
+# show the percentage of M misclassified as B
+cat("Rate of misclassifying Not Dropped Out as Dropped Out:\t", 
+    (confusion_tree[1,2] / 
+       (confusion_tree[1,1] + confusion_tree[1,2])) %>% 
+      round(4),"\n")
+# show the percentage of B misclassified as M
+cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t", 
+    (confusion_tree[2,1] / 
+       (confusion_tree[2,1] + confusion_tree[2,2])) %>% 
+      round(4),"\n")
+```
+
+
+Pruned tree
+```{r treePredictPruned, warning=FALSE, error=TRUE, message=FALSE}
+# use the decision tree created above to predict values in the test data 
+# and then store the results
+testing$tree_predict <- predict(diag.new.tree, 
+                                newdata=testing, 
+                                type="class")
+# create the confusion matrix using the table function
+confusion_tree <- table(Predicted =testing$tree_predict,
+                        Actual=testing$dropped)
+# Print a legend
+cat("0 = Not Dropped Out, 1 = Dropped Out\n\n")
+# Print the confusion matrix
+confusion_tree
+# show the accuracy of the decision tree
+cat("Overall accuracy of prediction:\t", 
+    sum(diag(confusion_tree)/nrow(testing)) %>% 
+      round(4),"\n")
+# show the percentage of M misclassified as B
+cat("Rate of misclassifying Not Dropped Out as Dropped Out:\t", 
+    (confusion_tree[1,2] / 
+       (confusion_tree[1,1] + confusion_tree[1,2])) %>% 
+      round(4),"\n")
+# show the percentage of B misclassified as M
+cat("Rate of misclassifying Dropped Out as Not Dropped Out:\t", 
+    (confusion_tree[2,1] / 
+       (confusion_tree[2,1] + confusion_tree[2,2])) %>% 
+      round(4),"\n")
+```
+
+## Summary & Conclusion
+
+Decision trees are easy for people to understand, because the visualization is relatively simple.  Our decision tree proved to be quite accurate, yielding the correct response 96.39% of the time.  Other models that were considered included:  
+
+- Logistic Regression with 95.4% accuracy  
+- Random Forest with 96.95% accuracy  
+- KNN with 94.72% accuracy  
+
+The decision tree proved to be the second most accurate method tested.  It is far easier to comprehend than the most accurate method - the random forest - and is only slightly less accurate.  The decision tree was able to predict the output using only used two variables: GPA and grade. This shows us that students’ performance at each stage in their high school career is a key predictor in determining who might drop out. In the school's action items from this model, the primary focus would be to improve students’ GPA performance. 
+
+Even though the random forest had the highest accuracy, we will use the decision tree as our final model for better interpretability.  In comparison to Hephaestats' final model with eight key indicators, our final accuracy used fewer variables and was over four percentage points higher than their model.  We were not given a list of the variables that Hephaestats used, and the specific modeling efforts used by Hepaestats were not revealed in the case study.  Following the principle of Occam’s razor, we chose to use a less complex model, especially since it yielded better results.
+
+
+
+
